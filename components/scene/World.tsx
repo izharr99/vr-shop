@@ -36,7 +36,17 @@ export default function World() {
 
   return (
     <KeyboardControls map={keyMap}>
-      <Canvas shadows camera={{ position: [0, 3, 12], fov: 60 }}>
+      <Canvas
+        shadows
+        camera={{ position: [0, 3, 12], fov: 60 }}
+        onCreated={({ scene, camera }) => {
+          // dev/test hook
+          const w = window as unknown as Record<string, unknown>;
+          w.__scene = scene;
+          w.__camera = camera;
+          import("three").then((t) => (w.__THREE = t));
+        }}
+      >
         <XR store={xrStore}>
           <Sky sunPosition={[10, 12, 8]} />
           <ambientLight intensity={0.6} />

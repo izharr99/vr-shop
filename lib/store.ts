@@ -1,4 +1,4 @@
-import { create } from "zustand";
+import { create, type StoreApi, type UseBoundStore } from "zustand";
 import type { CatalogItem } from "./catalog";
 
 export type BodyBuild = "slim" | "average" | "broad" | "heavy";
@@ -39,7 +39,7 @@ interface AppState {
   showToast: (msg: string) => void;
 }
 
-export const useApp = create<AppState>((set, get) => ({
+export const useApp: UseBoundStore<StoreApi<AppState>> = create<AppState>((set, get) => ({
   stage: "landing",
   measurements: null,
   avatarUrl: "/avatars/mannequin.glb",
@@ -71,3 +71,8 @@ export const useApp = create<AppState>((set, get) => ({
     setTimeout(() => set({ toast: null }), 3500);
   },
 }));
+
+// dev/test hook
+if (typeof window !== "undefined") {
+  (window as unknown as { __app: typeof useApp }).__app = useApp;
+}

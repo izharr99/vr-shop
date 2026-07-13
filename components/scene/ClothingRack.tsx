@@ -65,8 +65,8 @@ export default function ClothingRack({
         )}
         <meshStandardMaterial
           color={item.color}
-          emissive={isWorn ? "#22c55e" : hovered ? "#666600" : "#000000"}
-          emissiveIntensity={isWorn ? 0.35 : 0.5}
+          emissive={hovered ? "#ffffff" : "#000000"}
+          emissiveIntensity={0.12}
           roughness={0.8}
         />
       </mesh>
