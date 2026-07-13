@@ -6,6 +6,7 @@ import { useKeyboardControls } from "@react-three/drei";
 import { useXR } from "@react-three/xr";
 import * as THREE from "three";
 import AvatarModel from "./AvatarModel";
+import { moveState } from "@/lib/moveState";
 
 const SPEED = 3.5;
 const BOUNDS = 28;
@@ -52,6 +53,7 @@ export default function PlayerRig() {
       0,
       (backward ? 1 : 0) - (forward ? 1 : 0)
     );
+    moveState.moving = dir.lengthSq() > 0;
     if (dir.lengthSq() > 0) {
       dir.normalize().applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw.current);
       g.position.addScaledVector(dir, SPEED * delta);

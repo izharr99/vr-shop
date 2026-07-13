@@ -17,7 +17,7 @@ export default function Landing() {
       </div>
       <ol className="space-y-2 text-left text-neutral-300">
         <li>1 · Upload a full-body photo — we estimate your sizes on-device</li>
-        <li>2 · Selfie → your face on your avatar</li>
+        <li>2 · Your avatar is shaped to your build</li>
         <li>3 · Walk the mall, try on clothes in the fitting mirror, check out</li>
       </ol>
       <button

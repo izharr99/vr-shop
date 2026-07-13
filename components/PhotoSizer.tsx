@@ -87,10 +87,10 @@ export default function PhotoSizer() {
             Estimates from body proportions — shops will recommend sizes based on these.
           </p>
           <button
-            onClick={() => setStage("avatar")}
+            onClick={() => setStage("world")}
             className="mt-4 w-full rounded-full bg-emerald-600 py-3 font-semibold text-white transition hover:bg-emerald-500"
           >
-            Looks right → Create my avatar
+            Looks right → Enter the mall
           </button>
         </div>
       )}

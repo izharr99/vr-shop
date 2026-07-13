@@ -4,7 +4,6 @@ import dynamic from "next/dynamic";
 import { useApp } from "@/lib/store";
 import Landing from "@/components/Landing";
 import PhotoSizer from "@/components/PhotoSizer";
-import AvatarCreator from "@/components/AvatarCreator";
 import HUD from "@/components/HUD";
 
 const World = dynamic(() => import("@/components/scene/World"), {
@@ -21,7 +20,6 @@ export default function Home() {
 
   if (stage === "landing") return <Landing />;
   if (stage === "photo") return <PhotoSizer />;
-  if (stage === "avatar") return <AvatarCreator />;
 
   return (
     <main className="fixed inset-0">

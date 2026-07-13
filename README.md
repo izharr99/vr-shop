@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# VR Mall — try on clothes in VR
 
-## Getting Started
+A free WebXR shopping demo: upload a full-body photo, get sized automatically
+(on-device, the photo never leaves your browser), then walk a virtual mall,
+try clothes on an avatar shaped like you, and check out. Runs on desktop
+(WASD + mouse) and in any WebXR headset browser (Meta Quest etc.) from a URL —
+no install.
 
-First, run the development server:
+## Run it
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Desktop**: WASD/arrows to walk, drag to turn, click clothes to try on.
+- **VR**: open the deployed URL in the Quest browser and hit **Enter VR**.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## How sizing works
 
-## Learn More
+MediaPipe (pose landmarks + person segmentation) runs client-side on the
+uploaded photo. Absolute measurements from a single photo are impossible
+without a reference scale, so we measure **width-to-height ratios** at the
+shoulder/chest/waist/hip lines — which reliably separate slim from heavy
+builds — then project estimate numbers (chest, waist, shirt size, pant waist)
+using average-height anthropometrics. The same ratios drive the avatar's
+body morph, so the person in the mirror matches your build.
 
-To learn more about Next.js, take a look at the following resources:
+## Stack ($0)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Next.js + React Three Fiber + drei + `@react-three/xr` (WebXR)
+- `@mediapipe/tasks-vision` for on-device sizing
+- Bundled rigged character (`public/avatars/mannequin.glb`, Mixamo Xbot) with
+  idle/walk animations — no third-party avatar API dependency
+- Zustand for state; deploys free on Vercel
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+> Note: the original plan used Ready Player Me for selfie-face avatars, but
+> RPM shut down its public platform on Jan 31, 2026 (Netflix acquisition).
+> Face likeness is now a v2 item (Avatar SDK / Avaturn are candidate vendors).
 
-## Deploy on Vercel
+## Roadmap (sponsor phase)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Real branded 3D garments replacing the procedural meshes
+  (`components/scene/Garment.tsx`); catalog shape is ready in `lib/catalog.ts`
+- Face likeness from selfie (paid avatar vendor)
+- Better measurement extraction (multi-photo / calibrated capture)
+- Real checkout (Stripe), inventory, multiplayer shopping

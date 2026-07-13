@@ -15,12 +15,12 @@ export interface Measurements {
   buildFactor: number;
 }
 
-export type AppStage = "landing" | "photo" | "avatar" | "world";
+export type AppStage = "landing" | "photo" | "world";
 
 interface AppState {
   stage: AppStage;
   measurements: Measurements | null;
-  avatarUrl: string | null;
+  avatarUrl: string;
   /** itemId per slot currently worn */
   worn: Partial<Record<CatalogItem["slot"], string>>;
   cart: string[];
@@ -42,7 +42,7 @@ interface AppState {
 export const useApp = create<AppState>((set, get) => ({
   stage: "landing",
   measurements: null,
-  avatarUrl: null,
+  avatarUrl: "/avatars/mannequin.glb",
   worn: {},
   cart: [],
   checkoutOpen: false,

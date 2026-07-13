@@ -1,19 +1,20 @@
 "use client";
 
-import { useMemo, useEffect } from "react";
-import { useGLTF } from "@react-three/drei";
+import { useMemo, useEffect, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
+import { useGLTF, useAnimations } from "@react-three/drei";
 import { SkeletonUtils } from "three-stdlib";
 import * as THREE from "three";
 import { useApp } from "@/lib/store";
 import { byId } from "@/lib/catalog";
+import { moveState } from "@/lib/moveState";
 import Garment from "./Garment";
 
-/** RPM avatar + body-build morph + worn garments. */
+/** Bundled avatar + body-build morph from the photo + worn garments. */
 export default function AvatarModel() {
   const { avatarUrl, measurements, worn } = useApp();
   const buildFactor = measurements?.buildFactor ?? 1;
 
-  if (!avatarUrl) return null;
   return (
     <group>
       <LoadedAvatar url={avatarUrl} buildFactor={buildFactor} />
@@ -30,8 +31,11 @@ export default function AvatarModel() {
 }
 
 function LoadedAvatar({ url, buildFactor }: { url: string; buildFactor: number }) {
-  const { scene } = useGLTF(url);
+  const group = useRef<THREE.Group>(null);
+  const { scene, animations } = useGLTF(url);
   const model = useMemo(() => SkeletonUtils.clone(scene), [scene]);
+  const { actions } = useAnimations(animations, group);
+  const current = useRef<string | null>(null);
 
   useEffect(() => {
     // Bone scales compound down the chain (Hips → Spine → Spine1 → Spine2),
@@ -43,12 +47,12 @@ function LoadedAvatar({ url, buildFactor }: { url: string; buildFactor: number }
     let foundBones = false;
     model.traverse((obj) => {
       if (obj instanceof THREE.Bone) {
-        if (obj.name === "Hips") {
+        if (obj.name.endsWith("Hips")) {
           obj.scale.set(hipsScale, 1, hipsScale);
           foundBones = true;
-        } else if (["Spine", "Spine1", "Spine2"].includes(obj.name)) {
+        } else if (/Spine\d?$/.test(obj.name)) {
           obj.scale.set(spineStep, 1, spineStep);
-        } else if (obj.name === "Neck") {
+        } else if (obj.name.endsWith("Neck")) {
           // keep the head at normal width
           obj.scale.set(1 / f, 1, 1 / f);
         }
@@ -61,5 +65,23 @@ function LoadedAvatar({ url, buildFactor }: { url: string; buildFactor: number }
     if (!foundBones) model.scale.set(f, 1, f);
   }, [model, buildFactor]);
 
-  return <primitive object={model} />;
+  // crossfade idle ↔ walk with movement
+  useFrame(() => {
+    const want = moveState.moving ? "walk" : "idle";
+    if (current.current === want) return;
+    const next = actions[want];
+    if (!next) return;
+    const prev = current.current ? actions[current.current] : null;
+    prev?.fadeOut(0.25);
+    next.reset().fadeIn(0.25).play();
+    current.current = want;
+  });
+
+  return (
+    <group ref={group}>
+      <primitive object={model} />
+    </group>
+  );
 }
+
+useGLTF.preload("/avatars/mannequin.glb");
