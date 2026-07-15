@@ -73,8 +73,16 @@ export default function PhotoSizer() {
       {error && <p className="text-red-400">{error}</p>}
 
       {result && (
-        <div className="w-full rounded-2xl border border-neutral-700 bg-neutral-900 p-6 text-left">
-          <h2 className="mb-3 text-lg font-semibold">Your estimated fit</h2>
+        <div className="w-full animate-card-in rounded-2xl border border-emerald-800/60 bg-neutral-900 p-6 text-left shadow-[0_0_40px_-12px_rgba(16,185,129,0.45)]">
+          <div className="mb-4 text-center">
+            <div className="text-4xl">✨</div>
+            <h2 className="mt-1 text-2xl font-bold text-white">
+              You&apos;re a size <span className="text-emerald-400">{result.shirtSize}</span>
+            </h2>
+            <p className="text-sm text-neutral-400">
+              measured on your device — your photo never left this browser
+            </p>
+          </div>
           <ul className="grid grid-cols-2 gap-2 text-sm text-neutral-300">
             <li>Shirt size: <b className="text-white">{result.shirtSize}</b></li>
             <li>Pants waist: <b className="text-white">{result.pantsWaist}&quot;</b></li>
@@ -84,7 +92,8 @@ export default function PhotoSizer() {
             <li>Build: {result.build}</li>
           </ul>
           <p className="mt-3 text-xs text-neutral-500">
-            Estimates from body proportions — shops will recommend sizes based on these.
+            Every rack in the mall now shows prices in <b>your</b> size, and the
+            avatar in the mirror is shaped like you.
           </p>
           <button
             onClick={() => setStage("world")}

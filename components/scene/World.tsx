@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
-import { KeyboardControls, Sky } from "@react-three/drei";
+import { KeyboardControls, Sky, Environment, Lightformer } from "@react-three/drei";
 import { XR, createXRStore } from "@react-three/xr";
 import Mall from "./Mall";
 import PlayerRig from "./PlayerRig";
@@ -49,7 +49,14 @@ export default function World() {
       >
         <XR store={xrStore}>
           <Sky sunPosition={[10, 12, 8]} />
-          <ambientLight intensity={0.6} />
+          {/* procedural environment — soft sky dome + warm bounce, no
+              external HDR fetch, so it works offline and in VR */}
+          <Environment resolution={64} frames={1}>
+            <Lightformer intensity={1.1} rotation-x={Math.PI / 2} position={[0, 8, 0]} scale={[20, 20, 1]} color="#dfeaf5" />
+            <Lightformer intensity={0.5} rotation-y={Math.PI / 2} position={[-10, 2, 0]} scale={[12, 4, 1]} color="#ffe9c9" />
+            <Lightformer intensity={0.5} rotation-y={-Math.PI / 2} position={[10, 2, 0]} scale={[12, 4, 1]} color="#f5e0cf" />
+          </Environment>
+          <ambientLight intensity={0.35} />
           <directionalLight
             position={[10, 14, 8]}
             intensity={1.4}
