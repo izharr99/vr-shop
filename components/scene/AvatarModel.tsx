@@ -47,12 +47,9 @@ function LoadedAvatar({ url }: { url: string }) {
 
   // skinned body meshes: the smooth surface receives garments, the joint
   // balls get hidden under clothing; head bone anchors the hat
-  const { surface, joints, headBone, neckBone, chestBone } = useMemo(() => {
+  const { surface, joints } = useMemo(() => {
     let surface: THREE.SkinnedMesh | null = null;
     let joints: THREE.SkinnedMesh | null = null;
-    let head: THREE.Bone | null = null;
-    let neck: THREE.Bone | null = null;
-    let chest: THREE.Bone | null = null;
     model.traverse((obj) => {
       if (obj instanceof THREE.SkinnedMesh) {
         // the garment source is the high-poly smooth skin; the other mesh
@@ -63,19 +60,28 @@ function LoadedAvatar({ url }: { url: string }) {
           surface = obj;
         } else joints = obj;
       }
-      if (obj instanceof THREE.Bone) {
-        if (obj.name.endsWith("Head")) head = obj;
-        if (obj.name.endsWith("Neck")) neck = obj;
-        if (/Spine2$/.test(obj.name)) chest = obj;
-      }
     });
     return {
       surface: surface as THREE.SkinnedMesh | null,
       joints: joints as THREE.SkinnedMesh | null,
-      headBone: head as THREE.Bone | null,
-      neckBone: neck as THREE.Bone | null,
-      chestBone: chest as THREE.Bone | null,
     };
+  }, [model]);
+  // bones live in a ref — useFrame nudges them (head look, breathing)
+  const bones = useRef<{
+    head: THREE.Bone | null;
+    neck: THREE.Bone | null;
+    chest: THREE.Bone | null;
+  }>({ head: null, neck: null, chest: null });
+  useEffect(() => {
+    const b = bones.current;
+    b.head = b.neck = b.chest = null;
+    model.traverse((obj) => {
+      if (obj instanceof THREE.Bone) {
+        if (obj.name.endsWith("Head")) b.head = obj;
+        if (obj.name.endsWith("Neck")) b.neck = obj;
+        if (/Spine2$/.test(obj.name)) b.chest = obj;
+      }
+    });
   }, [model]);
   const hatRef = useRef<THREE.Group>(null);
   const detailRef = useRef<THREE.Group>(null);
@@ -133,9 +139,6 @@ function LoadedAvatar({ url }: { url: string }) {
     .map((i) => `${i.id}:${sizeDelta[i.slot] ?? 0}`)
     .sort()
     .join(",");
-  const settling = useRef<
-    { mesh: THREE.SkinnedMesh; t: number; amp: number }[]
-  >([]);
   useEffect(() => {
     const clones: THREE.SkinnedMesh[] = [];
     if (surface?.parent) {
@@ -148,14 +151,13 @@ function LoadedAvatar({ url }: { url: string }) {
           m.updateWorldMatrix(true, false);
           const ws = new THREE.Vector3();
           m.getWorldScale(ws);
-          settling.current.push({ mesh: m, t: 0, amp: 0.05 / (ws.y || 1) });
+          m.userData.settle = { start: -1, amp: 0.05 / (ws.y || 1) };
         }
       }
     }
     hideCovered.current?.(coveredRegions(wornItems));
     return () => {
       clones.forEach((c) => {
-        settling.current = settling.current.filter((s) => s.mesh !== c);
         c.parent?.remove(c);
         (c.material as THREE.Material).dispose();
       });
@@ -166,24 +168,24 @@ function LoadedAvatar({ url }: { url: string }) {
   // keep the hat on the head (bone tracked in group-local space so the
   // rig's internal 0.01 scale never touches the hat)
   const v = useRef(new THREE.Vector3()).current;
-  const q = useRef(new THREE.Quaternion()).current;
   const camLocal = useRef(new THREE.Vector3()).current;
   useFrame((state, delta) => {
     const g = group.current;
+    const { head, neck, chest } = bones.current;
     if (!g) return;
-    if (hatRef.current && headBone) {
-      headBone.getWorldPosition(v);
+    if (hatRef.current && head) {
+      head.getWorldPosition(v);
       g.worldToLocal(v);
       hatRef.current.position.set(v.x, v.y + 0.16, v.z + 0.01);
     }
     // chest details (zip/buttons) ride the chest bone
-    if (detailRef.current && chestBone) {
-      chestBone.getWorldPosition(v);
+    if (detailRef.current && chest) {
+      chest.getWorldPosition(v);
       g.worldToLocal(v);
       detailRef.current.position.set(v.x, v.y + 0.05, v.z);
     }
-    if (collarRef.current && neckBone) {
-      neckBone.getWorldPosition(v);
+    if (collarRef.current && neck) {
+      neck.getWorldPosition(v);
       g.worldToLocal(v);
       collarRef.current.position.set(v.x, v.y - 0.02, v.z);
     }
@@ -196,27 +198,29 @@ function LoadedAvatar({ url }: { url: string }) {
     }
 
     // in the fitting-room view the avatar meets your eyes
-    if (headBone && viewMode === "front") {
+    if (head && viewMode === "front") {
       camLocal.copy(camera.position);
       g.worldToLocal(camLocal);
       const yawToCam = Math.atan2(camLocal.x, camLocal.z);
       const t = 1 - Math.pow(0.001, delta);
-      headBone.rotation.y +=
+      head.rotation.y +=
         (THREE.MathUtils.clamp(yawToCam, -0.5, 0.5) - 0) * 0.5 * t;
     }
 
-    // fresh garments settle onto the body
-    if (settling.current.length) {
-      for (const s of settling.current) {
-        s.t += delta;
-        const k = Math.max(0, 1 - s.t / 0.4);
-        s.mesh.position.y = s.amp * k * k * Math.cos(s.t * 18);
+    // fresh garments settle onto the body (state lives in mesh.userData)
+    g.traverse((o) => {
+      const s = o.userData.settle as { start: number; amp: number } | undefined;
+      if (!s) return;
+      if (s.start < 0) s.start = state.clock.elapsedTime;
+      const t = state.clock.elapsedTime - s.start;
+      if (t >= 0.4) {
+        o.position.y = 0;
+        delete o.userData.settle;
+      } else {
+        const k = 1 - t / 0.4;
+        o.position.y = s.amp * k * k * Math.cos(t * 18);
       }
-      settling.current = settling.current.filter((s) => {
-        if (s.t >= 0.4) s.mesh.position.y = 0;
-        return s.t < 0.4;
-      });
-    }
+    });
   });
 
   // crossfade idle ↔ walk with movement

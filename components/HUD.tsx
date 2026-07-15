@@ -253,16 +253,22 @@ export default function HUD() {
 }
 
 /** Lightweight CSS confetti burst — no dependencies. */
+/** deterministic pseudo-random in [0,1) — pure, so it can run in render */
+const prand = (i: number, salt: number) => {
+  const x = Math.sin(i * 127.1 + salt * 311.7) * 43758.5453;
+  return x - Math.floor(x);
+};
+
 function Confetti() {
   const pieces = useMemo(
     () =>
       Array.from({ length: 90 }, (_, i) => ({
-        left: Math.random() * 100,
-        delay: Math.random() * 0.7,
-        dur: 2.2 + Math.random() * 1.6,
+        left: prand(i, 1) * 100,
+        delay: prand(i, 2) * 0.7,
+        dur: 2.2 + prand(i, 3) * 1.6,
         color: ["#f43f5e", "#f59e0b", "#10b981", "#3b82f6", "#a855f7", "#facc15"][i % 6],
-        size: 6 + Math.random() * 6,
-        spin: Math.random() > 0.5 ? 1 : -1,
+        size: 6 + prand(i, 4) * 6,
+        spin: prand(i, 5) > 0.5 ? 1 : -1,
       })),
     []
   );
