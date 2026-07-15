@@ -113,7 +113,13 @@ function createGarmentMaterial(color: string, spec: GarmentSpec) {
   });
   if (process.env.NEXT_PUBLIC_GARMENT_PLAIN) return mat;
   mat.onBeforeCompile = (shader) => {
-    shader.uniforms.uMask = { value: spec.mask };
+    mat.userData.shader = shader;
+    // NOTE: a bitmask + dynamic shift (`(uMask >> r) & 1`) miscompiles on
+    // ANGLE/Metal (region 3 discarded despite being in the mask), so the
+    // mask ships as a float array indexed by region instead.
+    shader.uniforms.uMaskArr = {
+      value: Array.from({ length: 7 }, (_, r) => ((spec.mask >> r) & 1) ? 1 : 0),
+    };
     shader.uniforms.uHipsY = { value: new THREE.Vector2(...spec.hipsY) };
     shader.vertexShader = shader.vertexShader
       .replace(
@@ -135,14 +141,14 @@ function createGarmentMaterial(color: string, spec: GarmentSpec) {
         `#include <common>
         varying float vRegion;
         varying float vGy;
-        uniform int uMask;
+        uniform float uMaskArr[7];
         uniform vec2 uHipsY;`
       )
       .replace(
         "#include <clipping_planes_fragment>",
         `{
-          int r = int(vRegion + 0.5);
-          if (((uMask >> r) & 1) == 0) discard;
+          int r = clamp(int(vRegion + 0.5), 0, 6);
+          if (uMaskArr[r] < 0.5) discard;
           if (r == 4 && (vGy < uHipsY.x || vGy > uHipsY.y)) discard;
         }
         #include <clipping_planes_fragment>`
